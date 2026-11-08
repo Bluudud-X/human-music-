@@ -229,7 +229,8 @@ function Loader.LaunchNooby()
 end
 
 ----------------------------------------------------------------
--- 24 Hours script collection.\nlocal TwentyFourScripts = {
+-- 24 Hours script collection.
+local TwentyFourScripts = {
     { name = "FE Brimstone", file = "Brimstone.txt", desc = "The last Forsaken..." },
     { name = "FE Dual Solaris V2 [Beta]", file = "DualSolarisV2.txt" },
     { name = "FE Dubstep Gun", file = "DubstepGun.txt" },
