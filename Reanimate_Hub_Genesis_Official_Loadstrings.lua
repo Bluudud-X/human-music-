@@ -60,9 +60,9 @@ local Theme = {
 }
 
 ----------------------------------------------------------------
--- Custom FDless manager (installed after Genesis initializes)
+-- Custom FDless manager (started before 24 Hours scripts)
 -- The merged FDless file is a hook layer: once loaded, it swaps the FDless source that
--- scripts loaded afterwards (Genesis, 24 Hours) try to use for the custom one. It exposes
+-- scripts loaded afterwards (24 Hours) try to use for the custom one. It exposes
 -- its own shutdown as TerminateFDless(), which stops the reanimate it captured and
 -- restores every hook it installed. After that it must be loaded again to be reinstalled.
 ----------------------------------------------------------------
@@ -104,7 +104,7 @@ function FDless.Stop()
     end
     local ok, err = pcall(terminate)
     if not ok then
-        warn("[Reanimate Hub] TerminateFDless error: " .. tostring(err))
+        warn("[24 Hours Hub] TerminateFDless error: " .. tostring(err))
         return false
     end
     return true
@@ -120,7 +120,7 @@ local ok, Rayfield = pcall(function()
     return loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 end)
 if not ok or not Rayfield then
-    warn("[Reanimate Hub] Failed to load Rayfield Gen2: " .. tostring(Rayfield))
+    warn("[24 Hours Hub] Failed to load Rayfield Gen2: " .. tostring(Rayfield))
     return
 end
 
@@ -169,7 +169,7 @@ function Loader.Teleport(label, placeId)
     end)
     if not ok then
         Hub.Notify(label, "Teleport failed.")
-        warn("[Reanimate Hub] " .. label .. " teleport failed: " .. tostring(err))
+        warn("[24 Hours Hub] " .. label .. " teleport failed: " .. tostring(err))
     end
 end
 
@@ -208,14 +208,14 @@ function Loader.LaunchNooby()
     local fetched, source = pcall(game.HttpGet, game, Config.NoobyUrl)
     if not fetched or type(source) ~= "string" or source == "" then
         Hub.Notify("Nooby Reanimate", "Failed to download the script.")
-        warn("[Reanimate Hub] Nooby download failed: " .. tostring(source))
+        warn("[24 Hours Hub] Nooby download failed: " .. tostring(source))
         return
     end
 
     local fn, compileErr = loadstring(source)
     if not fn then
         Hub.Notify("Nooby Reanimate", "Script failed to compile.")
-        warn("[Reanimate Hub] Nooby compile error: " .. tostring(compileErr))
+        warn("[24 Hours Hub] Nooby compile error: " .. tostring(compileErr))
         return
     end
 
@@ -223,7 +223,7 @@ function Loader.LaunchNooby()
         local ran, runErr = pcall(fn)
         if not ran then
             Hub.Notify("Nooby Reanimate", "Script errored while running.")
-            warn("[Reanimate Hub] Nooby runtime error: " .. tostring(runErr))
+            warn("[24 Hours Hub] Nooby runtime error: " .. tostring(runErr))
         end
     end)
 end
