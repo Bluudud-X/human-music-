@@ -7,13 +7,11 @@
 -- Config
 ----------------------------------------------------------------
 local Config = {
-    Title = "Reanimate Hub",
+    Title = "24 Hours Hub",
     TwentyFourBase = "https://raw.githubusercontent.com/BloxinStud10/24-Hours/refs/heads/main/Loadstrings/",
-    GenesisBase = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/",
     FDlessUrl = "https://raw.githubusercontent.com/Bluudud-X/human-music-/refs/heads/main/FDless_merged_min.lua",
     AutoRigPlaceId = 95964727828755, -- "autorig" experience, for making custom rigs
     StellarisPlaceId = 112144950473007, -- "24 Stellaris" experience, the 24 Hours accessories game
-    FoundationPlaceId = 14133411956, -- "Foundation" experience, the Genesis rig game
     BaseplatePlaceId = 123974602339071, -- "[UP] Just a baseplate."
     NoobyUrl = "https://raw.githubusercontent.com/Elliot12-wq/Uh-reanimation-modded-by-nooby/main/NOOBY'S%20UH%20MODDED%20REANIMATION.lua.txt",
 }
@@ -175,46 +173,27 @@ function Loader.Teleport(label, placeId)
     end
 end
 
--- Runs a remote loadstring file unchanged (original third-party script is not modified).
-function Loader.RunRemote(label, url, transform, afterRun)
+-- Runs a remote loadstring file unchanged.
+function Loader.RunRemote(label, url)
     local fetched, source = pcall(game.HttpGet, game, url)
     if not fetched or type(source) ~= "string" or source == "" then
         Hub.Notify(label, "Failed to download the script.")
-        warn("[Reanimate Hub] " .. label .. " download failed: " .. tostring(source))
+        warn("[24 Hours Hub] " .. label .. " download failed: " .. tostring(source))
         return false
-    end
-
-    if transform then
-        local transformed, result, transformErr = pcall(transform, source)
-        if not transformed or type(result) ~= "string" then
-            Hub.Notify(label, "Could not prepare the official Genesis loadstring.")
-            warn("[Reanimate Hub] " .. label .. " transform error: " .. tostring(result or transformErr))
-            return false
-        end
-        source = result
     end
 
     local fn, compileErr = loadstring(source)
     if not fn then
         Hub.Notify(label, "Script failed to compile.")
-        warn("[Reanimate Hub] " .. label .. " compile error: " .. tostring(compileErr))
+        warn("[24 Hours Hub] " .. label .. " compile error: " .. tostring(compileErr))
         return false
     end
+
     task.spawn(function()
         local ran, runErr = pcall(fn)
         if not ran then
             Hub.Notify(label, "Script errored while running.")
-            warn("[Reanimate Hub] " .. label .. " runtime error: " .. tostring(runErr))
-            return
-        end
-        if afterRun then
-            task.delay(1, function()
-                local callbackOk, callbackErr = pcall(afterRun)
-                if not callbackOk then
-                    Hub.Notify("Custom FDless", "Failed to start after Genesis.")
-                    warn("[Reanimate Hub] Post-launch callback error: " .. tostring(callbackErr))
-                end
-            end)
+            warn("[24 Hours Hub] " .. label .. " runtime error: " .. tostring(runErr))
         end
     end)
     return true
@@ -250,323 +229,7 @@ function Loader.LaunchNooby()
 end
 
 ----------------------------------------------------------------
--- Tab modules
-----------------------------------------------------------------
--- Genesis scripts. Each original loadstring file only sets option globals and then loads the
--- script from the repo's Obfuscations folder. The hub sets the same globals from its own
--- controls and loads that same script, so the third-party script itself is untouched.
--- fdless = false: the original file has no FDless options block, so none are set for it.
-local GenesisShared = {
-    { key = "fling", kind = "toggle", default = true, name = "Fling", desc = "Toggle fling." },
-    { key = "placeholders", kind = "toggle", default = true, name = "Placeholders", desc = "Adds transparent parts showing your hats when you don't have real ones." },
-    { key = "highlightflingtargets", kind = "toggle", default = true, name = "Highlight fling targets", desc = "Highlight fling targets." },
-    { key = "allowshiftlock", kind = "toggle", default = true, name = "Shiftlock", desc = "Adds shiftlock to the patchma rig." },
-    { key = "ctrltp", kind = "toggle", default = true, name = "Control click TP", desc = "Adds control click tp." },
-    { key = "clickfling", kind = "toggle", default = false, name = "Click fling", desc = "Adds click flinging regardless of attacks." },
-    { key = "flingtargetting", kind = "choice", default = 3, name = "Fling reproot method", desc = "How fling re-roots its target.", choices = {
-        { 3, "3 - sethiddenproperty" },
-        { 2, "2 - setscriptable" },
-        { 1, "1 - no unc (can be tampered with and detected)" },
-        { 0, "0 - off (prediction fling)" },
-    } },
-    { key = "flingdirection", kind = "choice", default = 0, name = "Fling direction", desc = "Direction you are flinging people in.", choices = {
-        { 0, "0 - upwards" },
-        { 1, "1 - downwards" },
-        { 2, "2 - horizontal" },
-    } },
-    { key = "flingchangestate", kind = "choice", default = 3, name = "Fling enhancements", desc = "Extra fling behavior.", choices = {
-        { 0, "0 - none" },
-        { 1, "1 - changestate physics (fling with whole body)" },
-        { 2, "2 - disable sitting" },
-        { 3, "3 - all (changestate physics and disable sitting)" },
-    } },
-    { key = "respawntp", kind = "choice", default = 3, name = "Respawn TP mode", desc = "Where your body goes on respawn.", choices = {
-        { 0, "0 - stay at spawn" },
-        { 1, "1 - randomtp close" },
-        { 2, "2 - behind fake character" },
-        { 3, "3 - hide body" },
-    } },
-    { key = "disguiscripts", kind = "toggle", default = true, name = "Disable PlayerGui scripts", desc = "Disable scripts inside of PlayerGui." },
-    { key = "discharscripts", kind = "toggle", default = true, name = "Disable character scripts", desc = "Disable character scripts." },
-    { key = "breakjointsmethod", kind = "choice", default = 4, name = "BreakJoints mode", desc = "How the character is broken.", choices = {
-        { 1, "1 - health+breakjoints (the most support)" },
-        { 2, "2 - health or breakjoints" },
-        { 3, "3 - breakjoints" },
-        { 4, "4 - serverbreakjoints (replicatesignal)" },
-    } },
-    { key = "hidedeatheffect", kind = "toggle", default = true, name = "Hide death effect", desc = "Hides the red damage border when you die (respawn)." },
-    { key = "simrad", kind = "toggle", default = true, name = "Simulation radius", desc = "Sets simulation radius." },
-}
-
-local GenesisScripts = {
-    { name = "AK-47", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/AK-47", fdless = true },
-    { name = "Ban Hammer", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Ban%20Hammer", fdless = true },
-    { name = "Banisher", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Banisher", fdless = false },
-    { name = "Dearsister", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Dearsister", fdless = true },
-    { name = "Gale Fighter", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Gale%20Fighter", fdless = true },
-    { name = "Goner", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Goner", fdless = true },
-    { name = "Good Cop Bad Cop", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Good%20Cop%20Bad%20Cop", fdless = true },
-    { name = "Karambit", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Karambit", fdless = false },
-    { name = "Krystal Dance", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Krystal%20Dance", fdless = true },
-    { name = "Lightning Cannon", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Lightning%20Cannon", fdless = true, options = {
-        { key = "lightmode", kind = "toggle", default = false, name = "Light mode", desc = "Overwrite black mode colors with white." },
-        { key = "effects", kind = "toggle", default = true, name = "Effects", desc = "Toggle effects. Turn off if you experience performance issues." },
-        { key = "timemultiplier", kind = "slider", default = 1, range = { 0.1, 10 }, increment = 0.1, name = "Animation speed", desc = "Animation speed multiplier (0.1 to 10)." },
-        { key = "walkspeedmultiplier", kind = "number", default = 1, name = "Walkspeed multiplier", desc = "Default 1. Can be negative." },
-    } },
-    { name = "Linked Sword", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Linked%20Sword", fdless = false, options = {
-        { key = "DisableFlingHealthBar", kind = "toggle", default = false, name = "Disable fling health bar", desc = "Sets DisableFlingHealthBar before launch." },
-    } },
-    { name = "Minigun", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Minigun", fdless = true },
-    { name = "Motorcycle", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Motorcycle", fdless = true },
-    { name = "Neko", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Neko", fdless = false, options = {
-        { key = "DisableFlingHealthBar", kind = "toggle", default = false, name = "Disable fling health bar", desc = "Sets DisableFlingHealthBar before launch." },
-    } },
-    { name = "Neptunian V", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Neptunian%20V", fdless = true },
-    { name = "Pistol", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Pistol", fdless = false },
-    { name = "Puppet Master", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Puppet%20Master", fdless = true, options = {
-        { key = "DisableRedAnimatedText", kind = "toggle", default = false, name = "Disable red animated text", desc = "Disables the animated text that keeps popping up on screen. Does not disable Kills, Target or Script Title." },
-    } },
-    { name = "Sadist Genocider", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Sadist%20Genocider", fdless = true },
-    { name = "Sin Dragon", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Sin%20Dragon", fdless = true, options = {
-        { key = "transparent", kind = "toggle", default = true, name = "Transparent parts", desc = "Toggle clientsided parts (dragon head, claws, etc)." },
-        { key = "effects", kind = "toggle", default = true, name = "Effects", desc = "Toggle clientsided effects (punch effect, laser effect, etc). Turn off if you use an emulator and are lagging." },
-    } },
-    { name = "Sniper", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Sniper", fdless = true },
-    { name = "Star Glitcher", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Star%20Glitcher", fdless = false, options = {
-        { key = "DisableFX", kind = "toggle", default = false, name = "Disable all effects", desc = "Could help with performance issues." },
-    } },
-    { name = "Studio Dummy", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Studio%20Dummy", fdless = true },
-}
-
--- Current option values, set by the controls below. Defaults match the original loadstring files.
-local GenesisValues = { scripts = {} }
-
-local function genesisEnv()
-    return (getgenv and getgenv()) or _G
-end
-
--- Adds one control for an option and keeps `store[opt.key]` in sync with it.
-local function addGenesisOption(tab, opt, store, flagPrefix)
-    if store[opt.key] == nil then
-        store[opt.key] = opt.default
-    end
-    local currentValue = store[opt.key]
-    local flag = flagPrefix .. "_" .. opt.key
-
-    if opt.kind == "toggle" then
-        tab:CreateToggle({
-            name = opt.name, description = opt.desc, value = currentValue,
-            flag = flag, forgetState = true,
-            callback = function(v) store[opt.key] = v end,
-        })
-    elseif opt.kind == "choice" then
-        local labels, byLabel, defaultLabel = {}, {}, nil
-        for _, choice in ipairs(opt.choices) do
-            table.insert(labels, choice[2])
-            byLabel[choice[2]] = choice[1]
-            if choice[1] == currentValue then defaultLabel = choice[2] end
-        end
-        tab:CreateDropdown({
-            name = opt.name, description = opt.desc, options = labels, value = defaultLabel,
-            flag = flag, forgetState = true,
-            callback = function(selected)
-                if type(selected) == "table" then selected = selected[1] end
-                if byLabel[selected] ~= nil then store[opt.key] = byLabel[selected] end
-            end,
-        })
-    elseif opt.kind == "slider" then
-        tab:CreateSlider({
-            name = opt.name, description = opt.desc, range = opt.range, increment = opt.increment,
-            value = currentValue, flag = flag, forgetState = true,
-            callback = function(v) store[opt.key] = v end,
-        })
-    elseif opt.kind == "number" then
-        tab:CreateInput({
-            name = opt.name, description = opt.desc, numeric = true, value = tostring(currentValue),
-            flag = flag, forgetState = true,
-            callback = function(text)
-                local n = tonumber(text)
-                if n then store[opt.key] = n end
-            end,
-        })
-    end
-end
-
--- Fetches the official Genesis Loadstrings wrapper. Its original Obfuscations loadstring
--- remains intact; only the wrapper's option assignment values are synchronized to this UI.
-local function genesisLiteral(value)
-    if type(value) == "boolean" then
-        return tostring(value)
-    elseif type(value) == "number" then
-        return string.format("%.14g", value)
-    elseif type(value) == "string" then
-        return string.format("%q", value)
-    end
-    return "nil"
-end
-
-local function applyGenesisOptions(source, overrides)
-    local output, found = {}, {}
-    for line in (source .. "\\n"):gmatch("(.-)\\n") do
-        line = line:gsub("\\r$", "")
-        local indent, key, spacing, oldValue, suffix = line:match("^(%s*)([%a_][%w_]*)(%s*=%s*)([^%s]+)(.*)$")
-        if key and overrides[key] ~= nil then
-            line = indent .. key .. spacing .. genesisLiteral(overrides[key]) .. suffix
-            found[key] = true
-        end
-        table.insert(output, line)
-    end
-
-    local missing = {}
-    for key, _ in pairs(overrides) do
-        if not found[key] then
-            table.insert(missing, key)
-        end
-    end
-    if #missing > 0 then
-        return nil, "Official wrapper did not declare: " .. table.concat(missing, ", ")
-    end
-    return table.concat(output, "\\n")
-end
-
-local function launchGenesis(script)
-    -- Required order: Genesis first, custom FDless second.
-    if FDless.IsRunning() and not FDless.Stop() then
-        Hub.Notify("Genesis FE", "Could not stop the previous custom FDless. Aborted.")
-        return
-    end
-
-    local overrides = {}
-    local scriptValues = GenesisValues.scripts[script.name] or {}
-    if script.fdless then
-        for _, opt in ipairs(GenesisShared) do
-            overrides[opt.key] = scriptValues[opt.key]
-        end
-    end
-    for _, opt in ipairs(script.options or {}) do
-        overrides[opt.key] = scriptValues[opt.key]
-    end
-
-    local function syncOptions(wrapperSource)
-        local updated, err = applyGenesisOptions(wrapperSource, overrides)
-        if not updated then
-            return nil, err
-        end
-        return updated
-    end
-
-    local wrapperUrl = script.url
-    Loader.RunRemote(script.name, wrapperUrl, syncOptions, function()
-        -- Install the custom FDless hook layer only after Genesis has executed.
-        local started, startErr = FDless.Start()
-        if not started then
-            Hub.Notify("Custom FDless", "Genesis loaded, but custom FDless failed to start.")
-            warn("[Reanimate Hub] Post-Genesis FDless start failed: " .. tostring(startErr))
-        else
-            Hub.Notify("Custom FDless", "Started after Genesis.")
-        end
-    end)
-end
-
-local function buildGenesis()
-    local tab = makeTab("Genesis FE", "Where it all started for me")
-    local settingsTab
-    local settingsScriptName
-
-    local function openGenesisSettings(script)
-        if settingsTab and settingsScriptName == script.name then
-            settingsTab:Select()
-            return
-        end
-
-        -- Keep only one temporary settings page so the top navigation does not fill up.
-        if settingsTab then
-            settingsTab:Remove()
-            settingsTab = nil
-            settingsScriptName = nil
-        end
-
-        local values = GenesisValues.scripts[script.name]
-        if not values then
-            values = {}
-            GenesisValues.scripts[script.name] = values
-        end
-
-        settingsTab = window:CreateTab({ name = script.name .. " Settings" })
-        settingsScriptName = script.name
-
-        settingsTab:CreateButton({
-            name = "Back to Genesis FE",
-            description = "Return to the Genesis script list.",
-            callback = function()
-                tab:Select()
-            end,
-        })
-
-        settingsTab:CreateText({
-            text = "Configure " .. script.name .. " here, then press Launch. These settings are saved separately for this script.",
-        })
-
-        if script.fdless then
-            settingsTab:CreateSection({ name = "FDless Options" })
-            for _, opt in ipairs(GenesisShared) do
-                addGenesisOption(settingsTab, opt, values, "genesis_" .. script.name)
-            end
-        end
-
-        if script.options and #script.options > 0 then
-            settingsTab:CreateSection({ name = "Script Options" })
-            for _, opt in ipairs(script.options) do
-                addGenesisOption(settingsTab, opt, values, "genesis_" .. script.name)
-            end
-        end
-
-        settingsTab:CreateSection({ name = "Launch" })
-        settingsTab:CreateButton({
-            name = "Launch " .. script.name,
-            description = "Start this Genesis script with the settings above.",
-            callback = function()
-                launchGenesis(script)
-            end,
-        })
-
-        settingsTab:Select()
-    end
-
-    tab:CreateSection({ name = "Rig" })
-    tab:CreateButton({
-        name = "Join Genesis rig game",
-        description = "Teleports you to Foundation, the Genesis rig game. The hub closes when you leave this server.",
-        callback = function()
-            Loader.Teleport("Foundation", Config.FoundationPlaceId)
-        end,
-    })
-
-    tab:CreateSection({ name = "Scripts" })
-    for _, script in ipairs(GenesisScripts) do
-        GenesisValues.scripts[script.name] = GenesisValues.scripts[script.name] or {}
-
-        local hasSettings = script.fdless or (script.options and #script.options > 0)
-        local note = hasSettings
-            and "Opens this script's settings page."
-            or "No settings available — launches immediately."
-
-        tab:CreateButton({
-            name = script.name,
-            description = note,
-            callback = function()
-                if hasSettings then
-                    openGenesisSettings(script)
-                else
-                    launchGenesis(script)
-                end
-            end,
-        })
-    end
-end
-
-local TwentyFourScripts = {
+-- 24 Hours script collection.\nlocal TwentyFourScripts = {
     { name = "FE Brimstone", file = "Brimstone.txt", desc = "The last Forsaken..." },
     { name = "FE Dual Solaris V2 [Beta]", file = "DualSolarisV2.txt" },
     { name = "FE Dubstep Gun", file = "DubstepGun.txt" },
@@ -576,7 +239,7 @@ local TwentyFourScripts = {
 }
 
 local function build24Hours()
-    local tab = makeTab("24 Hours", "Oh my God, isn't that the guy from Forsaken")
+    local tab = makeTab("24 Hours", "24 Hours scripts and accessories")
     tab:CreateSection({ name = "Accessories" })
     tab:CreateButton({
         name = "Join 24 Stellaris",
@@ -585,12 +248,19 @@ local function build24Hours()
             Loader.Teleport("24 Stellaris", Config.StellarisPlaceId)
         end,
     })
+
     tab:CreateSection({ name = "Scripts" })
     for _, script in ipairs(TwentyFourScripts) do
         tab:CreateButton({
             name = script.name,
-            description = script.desc,
+            description = script.desc or "Loads this 24 Hours script. Custom FDless is started automatically first.",
             callback = function()
+                local started, startErr = FDless.Start()
+                if not started then
+                    Hub.Notify("Custom FDless", "Could not start FDless. Script launch cancelled.")
+                    warn("[24 Hours Hub] FDless start failed: " .. tostring(startErr))
+                    return
+                end
                 Loader.RunRemote(script.name, Config.TwentyFourBase .. script.file)
             end,
         })
@@ -627,6 +297,32 @@ local function buildHats()
     })
 end
 
+local function buildFDless()
+    local tab = makeTab("FDless", "Manage the hub's custom FDless hook and reanimation.")
+    tab:CreateSection({ name = "Controls" })
+    tab:CreateButton({
+        name = "Start Custom FDless",
+        description = "Installs the custom FDless hook layer and displays its STOP FDLESS button.",
+        callback = function()
+            local started, err = FDless.Start()
+            if started then
+                Hub.Notify("Custom FDless", "Started.")
+            else
+                Hub.Notify("Custom FDless", "Failed to start.")
+                warn("[24 Hours Hub] FDless start failed: " .. tostring(err))
+            end
+        end,
+    })
+    tab:CreateButton({
+        name = "Stop Custom FDless",
+        description = "Stops tracked FDless reanimations, restores its hooks, and removes its stop button.",
+        callback = function()
+            FDless.Stop()
+            Hub.Notify("Custom FDless", "Stop requested.")
+        end,
+    })
+end
+
 local function buildCredits()
     local tab = makeTab("Credits", "Credits")
     tab:CreateText({ name = "Credits", text = "To be filled in." })
@@ -635,8 +331,8 @@ end
 ----------------------------------------------------------------
 -- Init
 ----------------------------------------------------------------
-buildGenesis()
 build24Hours()
+buildFDless()
 buildNooby()
 buildHats()
 buildCredits()
