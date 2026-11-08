@@ -62,7 +62,7 @@ local Theme = {
 }
 
 ----------------------------------------------------------------
--- Custom FDless manager (runs before Rayfield loads)
+-- Custom FDless manager (installed after Genesis initializes)
 -- The merged FDless file is a hook layer: once loaded, it swaps the FDless source that
 -- scripts loaded afterwards (Genesis, 24 Hours) try to use for the custom one. It exposes
 -- its own shutdown as TerminateFDless(), which stops the reanimate it captured and
@@ -115,14 +115,6 @@ end
 -- Global entry point from the spec, for other scripts to call.
 _G.StopFDless = FDless.Stop
 
-do
-    local started, err = FDless.Start()
-    if not started then
-        FDless.StartError = err
-        warn("[Reanimate Hub] " .. tostring(err))
-    end
-end
-
 ----------------------------------------------------------------
 -- Rayfield + window
 ----------------------------------------------------------------
@@ -157,10 +149,6 @@ local function makeTab(name, subtitle)
     return tab
 end
 
-if FDless.StartError then
-    Hub.Notify("Custom FDless", "Failed to start. See console.")
-end
-
 local function notWired(feature)
     return function()
         Hub.Notify(feature, "Not implemented yet.")
@@ -188,7 +176,7 @@ function Loader.Teleport(label, placeId)
 end
 
 -- Runs a remote loadstring file unchanged (original third-party script is not modified).
-function Loader.RunRemote(label, url, transform)
+function Loader.RunRemote(label, url, transform, afterRun)
     local fetched, source = pcall(game.HttpGet, game, url)
     if not fetched or type(source) ~= "string" or source == "" then
         Hub.Notify(label, "Failed to download the script.")
@@ -217,6 +205,16 @@ function Loader.RunRemote(label, url, transform)
         if not ran then
             Hub.Notify(label, "Script errored while running.")
             warn("[Reanimate Hub] " .. label .. " runtime error: " .. tostring(runErr))
+            return
+        end
+        if afterRun then
+            task.delay(1, function()
+                local callbackOk, callbackErr = pcall(afterRun)
+                if not callbackOk then
+                    Hub.Notify("Custom FDless", "Failed to start after Genesis.")
+                    warn("[Reanimate Hub] Post-launch callback error: " .. tostring(callbackErr))
+                end
+            end)
         end
     end)
     return true
@@ -433,14 +431,10 @@ local function applyGenesisOptions(source, overrides)
 end
 
 local function launchGenesis(script)
-    -- Every Genesis wrapper is launched only after this hub's custom FDless hook layer.
-    if not FDless.IsRunning() then
-        local started, startErr = FDless.Start()
-        if not started then
-            Hub.Notify("Genesis FE", "FDless failed to start. Script launch aborted.")
-            warn("[Reanimate Hub] Genesis FDless start failed: " .. tostring(startErr))
-            return
-        end
+    -- Required order: Genesis first, custom FDless second.
+    if FDless.IsRunning() and not FDless.Stop() then
+        Hub.Notify("Genesis FE", "Could not stop the previous custom FDless. Aborted.")
+        return
     end
 
     local overrides = {}
@@ -464,7 +458,16 @@ local function launchGenesis(script)
 
     local encodedName = script.name:gsub(" ", "%%20")
     local wrapperUrl = Config.GenesisBase .. encodedName
-    Loader.RunRemote(script.name, wrapperUrl, syncOptions)
+    Loader.RunRemote(script.name, wrapperUrl, syncOptions, function()
+        -- Install the custom FDless hook layer only after Genesis has executed.
+        local started, startErr = FDless.Start()
+        if not started then
+            Hub.Notify("Custom FDless", "Genesis loaded, but custom FDless failed to start.")
+            warn("[Reanimate Hub] Post-Genesis FDless start failed: " .. tostring(startErr))
+        else
+            Hub.Notify("Custom FDless", "Started after Genesis.")
+        end
+    end)
 end
 
 local function buildGenesis()
