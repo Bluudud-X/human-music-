@@ -299,44 +299,44 @@ local GenesisShared = {
 }
 
 local GenesisScripts = {
-    { name = "AK-47", fdless = true },
-    { name = "Ban Hammer", fdless = true },
-    { name = "Banisher", fdless = false },
-    { name = "Dearsister", fdless = true },
-    { name = "Gale Fighter", fdless = true },
-    { name = "Goner", fdless = true },
-    { name = "Good Cop Bad Cop", fdless = true },
-    { name = "Karambit", fdless = false },
-    { name = "Krystal Dance", fdless = true },
-    { name = "Lightning Cannon", fdless = true, options = {
+    { name = "AK-47", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/AK-47", fdless = true },
+    { name = "Ban Hammer", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Ban%20Hammer", fdless = true },
+    { name = "Banisher", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Banisher", fdless = false },
+    { name = "Dearsister", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Dearsister", fdless = true },
+    { name = "Gale Fighter", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Gale%20Fighter", fdless = true },
+    { name = "Goner", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Goner", fdless = true },
+    { name = "Good Cop Bad Cop", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Good%20Cop%20Bad%20Cop", fdless = true },
+    { name = "Karambit", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Karambit", fdless = false },
+    { name = "Krystal Dance", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Krystal%20Dance", fdless = true },
+    { name = "Lightning Cannon", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Lightning%20Cannon", fdless = true, options = {
         { key = "lightmode", kind = "toggle", default = false, name = "Light mode", desc = "Overwrite black mode colors with white." },
         { key = "effects", kind = "toggle", default = true, name = "Effects", desc = "Toggle effects. Turn off if you experience performance issues." },
         { key = "timemultiplier", kind = "slider", default = 1, range = { 0.1, 10 }, increment = 0.1, name = "Animation speed", desc = "Animation speed multiplier (0.1 to 10)." },
         { key = "walkspeedmultiplier", kind = "number", default = 1, name = "Walkspeed multiplier", desc = "Default 1. Can be negative." },
     } },
-    { name = "Linked Sword", fdless = false, options = {
+    { name = "Linked Sword", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Linked%20Sword", fdless = false, options = {
         { key = "DisableFlingHealthBar", kind = "toggle", default = false, name = "Disable fling health bar", desc = "Sets DisableFlingHealthBar before launch." },
     } },
-    { name = "Minigun", fdless = true },
-    { name = "Motorcycle", fdless = true },
-    { name = "Neko", fdless = false, options = {
+    { name = "Minigun", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Minigun", fdless = true },
+    { name = "Motorcycle", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Motorcycle", fdless = true },
+    { name = "Neko", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Neko", fdless = false, options = {
         { key = "DisableFlingHealthBar", kind = "toggle", default = false, name = "Disable fling health bar", desc = "Sets DisableFlingHealthBar before launch." },
     } },
-    { name = "Neptunian V", fdless = true },
-    { name = "Pistol", fdless = false },
-    { name = "Puppet Master", fdless = true, options = {
+    { name = "Neptunian V", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Neptunian%20V", fdless = true },
+    { name = "Pistol", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Pistol", fdless = false },
+    { name = "Puppet Master", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Puppet%20Master", fdless = true, options = {
         { key = "DisableRedAnimatedText", kind = "toggle", default = false, name = "Disable red animated text", desc = "Disables the animated text that keeps popping up on screen. Does not disable Kills, Target or Script Title." },
     } },
-    { name = "Sadist Genocider", fdless = true },
-    { name = "Sin Dragon", fdless = true, options = {
+    { name = "Sadist Genocider", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Sadist%20Genocider", fdless = true },
+    { name = "Sin Dragon", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Sin%20Dragon", fdless = true, options = {
         { key = "transparent", kind = "toggle", default = true, name = "Transparent parts", desc = "Toggle clientsided parts (dragon head, claws, etc)." },
         { key = "effects", kind = "toggle", default = true, name = "Effects", desc = "Toggle clientsided effects (punch effect, laser effect, etc). Turn off if you use an emulator and are lagging." },
     } },
-    { name = "Sniper", fdless = true },
-    { name = "Star Glitcher", fdless = false, options = {
+    { name = "Sniper", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Sniper", fdless = true },
+    { name = "Star Glitcher", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Star%20Glitcher", fdless = false, options = {
         { key = "DisableFX", kind = "toggle", default = false, name = "Disable all effects", desc = "Could help with performance issues." },
     } },
-    { name = "Studio Dummy", fdless = true },
+    { name = "Studio Dummy", url = "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Studio%20Dummy", fdless = true },
 }
 
 -- Current option values, set by the controls below. Defaults match the original loadstring files.
@@ -456,8 +456,7 @@ local function launchGenesis(script)
         return updated
     end
 
-    local encodedName = script.name:gsub(" ", "%%20")
-    local wrapperUrl = Config.GenesisBase .. encodedName
+    local wrapperUrl = script.url
     Loader.RunRemote(script.name, wrapperUrl, syncOptions, function()
         -- Install the custom FDless hook layer only after Genesis has executed.
         local started, startErr = FDless.Start()
