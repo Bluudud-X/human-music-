@@ -342,7 +342,7 @@ local GenesisScripts = {
 }
 
 -- Current option values, set by the controls below. Defaults match the original loadstring files.
-local GenesisValues = { shared = {}, scripts = {} }
+local GenesisValues = { scripts = {} }
 
 local function genesisEnv()
     return (getgenv and getgenv()) or _G
@@ -350,12 +350,15 @@ end
 
 -- Adds one control for an option and keeps `store[opt.key]` in sync with it.
 local function addGenesisOption(tab, opt, store, flagPrefix)
-    store[opt.key] = opt.default
+    if store[opt.key] == nil then
+        store[opt.key] = opt.default
+    end
+    local currentValue = store[opt.key]
     local flag = flagPrefix .. "_" .. opt.key
 
     if opt.kind == "toggle" then
         tab:CreateToggle({
-            name = opt.name, description = opt.desc, value = opt.default,
+            name = opt.name, description = opt.desc, value = currentValue,
             flag = flag, forgetState = true,
             callback = function(v) store[opt.key] = v end,
         })
@@ -364,7 +367,7 @@ local function addGenesisOption(tab, opt, store, flagPrefix)
         for _, choice in ipairs(opt.choices) do
             table.insert(labels, choice[2])
             byLabel[choice[2]] = choice[1]
-            if choice[1] == opt.default then defaultLabel = choice[2] end
+            if choice[1] == currentValue then defaultLabel = choice[2] end
         end
         tab:CreateDropdown({
             name = opt.name, description = opt.desc, options = labels, value = defaultLabel,
@@ -377,12 +380,12 @@ local function addGenesisOption(tab, opt, store, flagPrefix)
     elseif opt.kind == "slider" then
         tab:CreateSlider({
             name = opt.name, description = opt.desc, range = opt.range, increment = opt.increment,
-            value = opt.default, flag = flag, forgetState = true,
+            value = currentValue, flag = flag, forgetState = true,
             callback = function(v) store[opt.key] = v end,
         })
     elseif opt.kind == "number" then
         tab:CreateInput({
-            name = opt.name, description = opt.desc, numeric = true, value = tostring(opt.default),
+            name = opt.name, description = opt.desc, numeric = true, value = tostring(currentValue),
             flag = flag, forgetState = true,
             callback = function(text)
                 local n = tonumber(text)
@@ -441,13 +444,14 @@ local function launchGenesis(script)
     end
 
     local overrides = {}
+    local scriptValues = GenesisValues.scripts[script.name] or {}
     if script.fdless then
         for _, opt in ipairs(GenesisShared) do
-            overrides[opt.key] = GenesisValues.shared[opt.key]
+            overrides[opt.key] = scriptValues[opt.key]
         end
     end
     for _, opt in ipairs(script.options or {}) do
-        overrides[opt.key] = GenesisValues.scripts[script.name][opt.key]
+        overrides[opt.key] = scriptValues[opt.key]
     end
 
     local function syncOptions(wrapperSource)
@@ -465,6 +469,68 @@ end
 
 local function buildGenesis()
     local tab = makeTab("Genesis FE", "Where it all started for me")
+    local settingsTab
+    local settingsScriptName
+
+    local function openGenesisSettings(script)
+        if settingsTab and settingsScriptName == script.name then
+            settingsTab:Select()
+            return
+        end
+
+        -- Keep only one temporary settings page so the top navigation does not fill up.
+        if settingsTab then
+            settingsTab:Remove()
+            settingsTab = nil
+            settingsScriptName = nil
+        end
+
+        local values = GenesisValues.scripts[script.name]
+        if not values then
+            values = {}
+            GenesisValues.scripts[script.name] = values
+        end
+
+        settingsTab = window:CreateTab({ name = script.name .. " Settings" })
+        settingsScriptName = script.name
+
+        settingsTab:CreateButton({
+            name = "Back to Genesis FE",
+            description = "Return to the Genesis script list.",
+            callback = function()
+                tab:Select()
+            end,
+        })
+
+        settingsTab:CreateText({
+            text = "Configure " .. script.name .. " here, then press Launch. These settings are saved separately for this script.",
+        })
+
+        if script.fdless then
+            settingsTab:CreateSection({ name = "FDless Options" })
+            for _, opt in ipairs(GenesisShared) do
+                addGenesisOption(settingsTab, opt, values, "genesis_" .. script.name)
+            end
+        end
+
+        if script.options and #script.options > 0 then
+            settingsTab:CreateSection({ name = "Script Options" })
+            for _, opt in ipairs(script.options) do
+                addGenesisOption(settingsTab, opt, values, "genesis_" .. script.name)
+            end
+        end
+
+        settingsTab:CreateSection({ name = "Launch" })
+        settingsTab:CreateButton({
+            name = "Launch " .. script.name,
+            description = "Start this Genesis script with the settings above.",
+            callback = function()
+                launchGenesis(script)
+            end,
+        })
+
+        settingsTab:Select()
+    end
 
     tab:CreateSection({ name = "Rig" })
     tab:CreateButton({
@@ -477,35 +543,24 @@ local function buildGenesis()
 
     tab:CreateSection({ name = "Scripts" })
     for _, script in ipairs(GenesisScripts) do
-        GenesisValues.scripts[script.name] = {}
-        local note = script.fdless and "Uses the FDless options below." or "Has no FDless options of its own."
-        if script.options then
-            note = note .. " Its own options are further down."
-        end
+        GenesisValues.scripts[script.name] = GenesisValues.scripts[script.name] or {}
+
+        local hasSettings = script.fdless or (script.options and #script.options > 0)
+        local note = hasSettings
+            and "Opens this script's settings page."
+            or "No settings available — launches immediately."
+
         tab:CreateButton({
             name = script.name,
             description = note,
             callback = function()
-                launchGenesis(script)
+                if hasSettings then
+                    openGenesisSettings(script)
+                else
+                    launchGenesis(script)
+                end
             end,
         })
-    end
-
-    tab:CreateSection({ name = "FDless Options" })
-    tab:CreateText({
-        text = "These apply to every script above that uses FDless. Change them before you launch a script.",
-    })
-    for _, opt in ipairs(GenesisShared) do
-        addGenesisOption(tab, opt, GenesisValues.shared, "genesis_shared")
-    end
-
-    for _, script in ipairs(GenesisScripts) do
-        if script.options then
-            tab:CreateSection({ name = script.name .. " Options" })
-            for _, opt in ipairs(script.options) do
-                addGenesisOption(tab, opt, GenesisValues.scripts[script.name], "genesis_" .. script.name)
-            end
-        end
     end
 end
 
