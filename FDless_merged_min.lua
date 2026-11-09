@@ -29,6 +29,12 @@ local LOCAL   = {               -- 替换内容：先找本地文件
 }
 local MIRROR  = "https://cdn.jsdelivr.net/gh/Jskfhggjxu/My-Script@main/Loadstring/FDless_merged_min.lua"
 local VERBOSE = true
+
+-- ===== 署名通知 =====
+local CREDIT_ENABLED  = true
+local CREDIT_TITLE    = "FDless"
+local CREDIT_TEXT     = "Modded by Bluudud"   -- 想加原作者就写成 "Modded by Bluudud | Original by <name>"
+local CREDIT_DURATION = 8
 -- 点号调用（game.HttpGet(game,url) / 被缓存成局部变量后再调）必须 hookfunction 才能拦到，
 -- 但会让 game.HttpGet 变成 Lua 闭包（debug.info 不再是 "[C]"）。如果哪个脚本在查这个指纹，
 -- 把下面改成 false：冒号调用照样拦得住，点号调用则放行原版。
@@ -47,7 +53,6 @@ local G = getgenv and getgenv() or _G
 local active = true      -- terminate 之后变 false，所有钩子退化成透传
 local restorers = {}     -- 还原函数列表（terminate 时倒序执行）
 local modules = {}       -- 捕获到的 FDless 模块表（里面有 stopreanimate）
-local terminateGui = nil -- 可视化停止按钮
 
 local function track(tbl, key, orig, wrapper)
 	restorers[#restorers + 1] = function()
@@ -3172,17 +3177,34 @@ local function terminate()
 	G[HOOK_FLAG] = nil
 	G.TerminateFDless = nil
 	pcall(function() _G.TerminateFDless = nil end)
-	if terminateGui then
-		pcall(function() terminateGui:Destroy() end)
-		terminateGui = nil
-	end
 	log("已终止：停掉 " .. stopped .. " 个 reanimate，钩子已还原")
 	return true, stopped
 end
 G.TerminateFDless = terminate
 pcall(function() _G.TerminateFDless = terminate end)
 
-local installedThisRun = false
+-- 每个会话只弹一次；CoreGui 没准备好时 SetCore 会抛错，所以重试几次
+local function sendCredit()
+	if not CREDIT_ENABLED or G.__FDlessCreditShown then
+		return
+	end
+	G.__FDlessCreditShown = true
+	task.spawn(function()
+		local sg = game:GetService("StarterGui")
+		for _ = 1, 20 do
+			local ok = pcall(sg.SetCore, sg, "SendNotification", {
+				Title = CREDIT_TITLE,
+				Text = CREDIT_TEXT,
+				Duration = CREDIT_DURATION,
+			})
+			if ok then
+				return
+			end
+			task.wait(0.5)
+		end
+	end)
+end
+
 if G[HOOK_FLAG] then
 	if VERBOSE then
 		print("[FDlessHook] 已安装过，跳过")
@@ -3194,67 +3216,7 @@ else
 		G[HOOK_FLAG] = nil
 		warn("[FDlessHook] 安装失败: " .. tostring(res))
 	else
-		installedThisRun = true
 		log("装好了，共 " .. tostring(res) .. " 个入口")
+		sendCredit()
 	end
 end
-
--- ===== 可视化终止按钮 =====
--- 仅在本次成功安装时创建，避免重复执行脚本时覆盖旧实例的停止入口。
-if installedThisRun then
-	local function createTerminateUI()
-		local ok, result = pcall(function()
-			local gui = Instance.new("ScreenGui")
-			gui.Name = "FDlessTerminateUI"
-			gui.ResetOnSpawn = false
-			gui.IgnoreGuiInset = true
-			gui.DisplayOrder = 999999
-
-			local button = Instance.new("TextButton")
-			button.Name = "StopButton"
-			button.Size = UDim2.fromOffset(154, 42)
-			button.Position = UDim2.new(1, -166, 1, -112)
-			button.BackgroundColor3 = Color3.fromRGB(5, 12, 20)
-			button.BorderSizePixel = 0
-			button.Text = "STOP FDLESS"
-			button.TextColor3 = Color3.fromRGB(255, 255, 255)
-			button.TextSize = 14
-			button.Font = Enum.Font.GothamBold
-			button.AutoButtonColor = true
-			button.Parent = gui
-
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius = UDim.new(0, 9)
-			corner.Parent = button
-
-			local stroke = Instance.new("UIStroke")
-			stroke.Color = Color3.fromRGB(0, 170, 255)
-			stroke.Thickness = 1.5
-			stroke.Parent = button
-
-			local parent
-			pcall(function()
-				parent = game:GetService("CoreGui")
-			end)
-			if not parent then
-				parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-			end
-			gui.Parent = parent
-
-			button.Activated:Connect(function()
-				button.Text = "STOPPING..."
-				button.Active = false
-				terminate()
-			end)
-
-			terminateGui = gui
-		end)
-
-		if not ok then
-			warn("[FDlessHook] 无法创建停止按钮: " .. tostring(result))
-		end
-	end
-
-	createTerminateUI()
-end
-
